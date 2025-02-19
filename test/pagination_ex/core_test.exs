@@ -1,7 +1,16 @@
 defmodule PaginationEx.CoreTest do
   use ExUnit.Case
   use Ecto.Schema
+
   import Ecto.Query
+
+  @default_per_page 30
+
+  defmodule TestRepo do
+    use Ecto.Repo,
+      otp_app: :pagination_ex,
+      adapter: Ecto.Adapters.Postgres
+  end
 
   defmodule TestSchema do
     use Ecto.Schema
@@ -13,25 +22,22 @@ defmodule PaginationEx.CoreTest do
     end
   end
 
-  defmodule TestRepo do
-    use Ecto.Repo,
-      otp_app: :pagination_ex,
-      adapter: Ecto.Adapters.Postgres
-  end
-
-  setup do
+  setup_all do
     Application.put_env(:pagination_ex, TestRepo,
       username: "postgres",
       password: "postgres",
       hostname: "localhost",
       port: 5432,
       database: "pagination_ex_test",
-      pool: Ecto.Adapters.SQL.Sandbox,
-      pool_size: 10
+      pool: Ecto.Adapters.SQL.Sandbox
     )
 
-    {:ok, _} = TestRepo.start_link()
+    TestRepo.start_link()
 
+    :ok
+  end
+
+  setup do
     TestRepo.query!("DROP TABLE IF EXISTS test_items")
 
     TestRepo.query!("""
@@ -100,8 +106,100 @@ defmodule PaginationEx.CoreTest do
       query = from(i in TestSchema)
       result = PaginationEx.new(query, %{"page" => "invalid"})
 
-      assert result.page_number == :error
+      assert result.page_number == 1
+    end
+
+    test "handles zero per_page" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"per_page" => "0"})
+
+      assert result.per_page == @default_per_page
+    end
+
+    test "handles negative per_page" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"per_page" => "-10"})
+
+      assert result.per_page == @default_per_page
+    end
+
+    test "handles page number greater than total pages" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"page" => "5"})
+
+      assert result.page_number == 5
       assert result.total_entries == 30
+      assert length(result.entries) == 0
+    end
+
+    test "accepts total override in params" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"total" => "50"})
+
+      assert result.total_entries == 50
+    end
+
+    test "handles nil values in params" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"page" => nil, "per_page" => nil})
+
+      assert result.page_number == 1
+      assert result.per_page == 30
+    end
+
+    test "handles missing repo configuration" do
+      Application.delete_env(:pagination_ex, :repo)
+
+      assert_raise RuntimeError, ~r/You must configure a repo/, fn ->
+        query = from(i in TestSchema)
+        PaginationEx.new(query, %{})
+      end
+    end
+
+    test "handles in_groups with empty result set" do
+      query = from(i in TestSchema, where: i.name == "NonExistent")
+      result = PaginationEx.in_groups(query, %{})
+
+      assert length(result) == 0
+    end
+
+    test "accepts integer params" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"page" => 2, "per_page" => 10})
+
+      assert result.page_number == 2
+      assert result.per_page == 10
+      assert result.total_entries == 30
+    end
+
+    test "calculates total pages correctly with remainder" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"per_page" => "7"})
+
+      assert result.pages == 5
+    end
+
+    test "keeps original query in struct" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{})
+
+      assert result.query == query
+    end
+
+    test "handles very large page numbers" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"page" => "999999"})
+
+      assert result.page_number == 999_999
+      assert length(result.entries) == 0
+    end
+
+    test "handles very large per_page" do
+      query = from(i in TestSchema)
+      result = PaginationEx.new(query, %{"per_page" => "999999"})
+
+      assert result.per_page == 999_999
+      assert length(result.entries) == 30
     end
   end
 end

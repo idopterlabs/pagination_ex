@@ -11,8 +11,8 @@ defmodule PaginationEx.Core do
   @type t() :: %__MODULE__{
           entries: list(any()),
           total_entries: integer(),
-          page_number: non_neg_integer(),
-          per_page: integer(),
+          page_number: pos_integer(),
+          per_page: pos_integer(),
           pages: non_neg_integer(),
           query: Ecto.Query.t()
         }
@@ -27,8 +27,8 @@ defmodule PaginationEx.Core do
   end
 
   def new(query, params, opts \\ []) do
-    page_number = params |> Map.get("page", 1) |> to_int()
-    per_page = params |> Map.get("per_page", config(:per_page, @default_per_page)) |> to_int()
+    page_number = params |> Map.get("page", 1) |> to_int(:page)
+    per_page = params |> Map.get("per_page", @default_per_page) |> to_int(:per_page)
     total = total_entries(query, params)
 
     %__MODULE__{
@@ -41,38 +41,62 @@ defmodule PaginationEx.Core do
     }
   end
 
-  defp entries(query, page_number, per_page, opts) when is_integer(page_number) do
-    offset = per_page * (page_number - 1)
+  defp entries(query, page_number, per_page, opts)
+       when is_integer(page_number) and is_integer(per_page) and per_page > 0 do
+    page = max(1, page_number)
+    offset = max(0, per_page * (page - 1))
 
     from(query, offset: ^offset, limit: ^per_page)
     |> repo().all(opts)
   end
 
-  defp entries(_query, :error, _per_page, _opts), do: []
+  defp entries(_query, _page_number, _per_page, _opts), do: []
 
   defp total_entries(query, %{"total" => nil}), do: total_entries(query, %{})
 
-  defp total_entries(_query, %{"total" => total}), do: total
+  defp total_entries(_query, %{"total" => total}) when is_binary(total) do
+    case Integer.parse(total) do
+      {num, _} when num >= 0 -> num
+      _ -> 0
+    end
+  end
+
+  defp total_entries(_query, %{"total" => total}) when is_integer(total) and total >= 0, do: total
 
   defp total_entries(query, _params) do
     query
     |> repo().aggregate(:count, :id)
   end
 
-  defp total_pages(total, per_page) do
+  defp total_pages(total, per_page) when is_integer(per_page) and per_page > 0 do
     Float.ceil(total / per_page) |> Kernel.trunc()
   end
 
-  defp to_int(i) when is_integer(i), do: i
+  defp total_pages(_total, _per_page), do: 0
 
-  defp to_int(s) when is_binary(s) do
+  defp to_int(nil, :page), do: 1
+  defp to_int(i, :page) when is_integer(i), do: max(1, i)
+
+  defp to_int(s, :page) when is_binary(s) do
     case Integer.parse(s) do
-      {i, _} -> i
-      :error -> :error
+      {i, _} -> max(1, i)
+      _ -> 1
     end
   end
 
-  defp to_int(_other), do: :error
+  defp to_int(_, :page), do: 1
+
+  defp to_int(nil, :per_page), do: @default_per_page
+  defp to_int(i, :per_page) when is_integer(i) and i > 0, do: i
+
+  defp to_int(s, :per_page) when is_binary(s) do
+    case Integer.parse(s) do
+      {i, _} when i > 0 -> i
+      _ -> @default_per_page
+    end
+  end
+
+  defp to_int(_, :per_page), do: @default_per_page
 
   defp set_group_params(params) do
     per_group = Map.get(params, "per_group", config(:per_group, @default_per_group))
