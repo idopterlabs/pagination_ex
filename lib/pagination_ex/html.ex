@@ -1,12 +1,19 @@
 defmodule PaginationEx.HTML do
   @moduledoc """
-  HTML helpers for pagination rendering with Tailwind CSS.
+  HTML helpers for pagination rendering with support for custom templates.
+  Default implementation uses Tailwind CSS.
   """
 
   use PhoenixHTMLHelpers
 
-  def paginate(conn, path) do
-    do_paginate(conn, path, conn.assigns.pagination)
+  def paginate(conn, path, opts \\ []) do
+    template_module = Keyword.get(opts, :template_module)
+
+    if template_module do
+      apply(template_module, :render_pagination, [conn, path, conn.assigns.pagination])
+    else
+      do_paginate(conn, path, conn.assigns.pagination)
+    end
   end
 
   defp do_paginate(_conn, _path, %{total_entries: total_entries, per_page: per_page})
@@ -36,7 +43,7 @@ defmodule PaginationEx.HTML do
 
   def next_path(conn, path, current_page, total_pages) do
     if total_pages > current_page do
-      next_path(conn, path, current_page)
+      next_path_internal(conn, path, current_page)
     else
       content_tag(:a, translate("Next"),
         class:
@@ -46,10 +53,10 @@ defmodule PaginationEx.HTML do
     end
   end
 
-  defp next_path(conn, path, ""), do: next_path(conn, path, 1)
-  defp next_path(conn, path, nil), do: next_path(conn, path, 1)
+  defp next_path_internal(conn, path, ""), do: next_path_internal(conn, path, 1)
+  defp next_path_internal(conn, path, nil), do: next_path_internal(conn, path, 1)
 
-  defp next_path(conn, path, page) do
+  defp next_path_internal(conn, path, page) do
     next_page = page + 1
     url = build_url(conn, path, next_page)
 
@@ -60,18 +67,22 @@ defmodule PaginationEx.HTML do
     )
   end
 
-  defp previous_path(conn, path, ""), do: previous_path(conn, path, 1)
-  defp previous_path(conn, path, nil), do: previous_path(conn, path, 1)
-
-  defp previous_path(_conn, _path, 1) do
-    content_tag(:a, translate("Previous"),
-      class:
-        "relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-lg cursor-not-allowed",
-      disabled: true
-    )
+  def previous_path(conn, path, current_page) do
+    if current_page > 1 do
+      previous_path_internal(conn, path, current_page)
+    else
+      content_tag(:a, translate("Previous"),
+        class:
+          "relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-lg cursor-not-allowed",
+        disabled: true
+      )
+    end
   end
 
-  defp previous_path(conn, path, page) do
+  defp previous_path_internal(conn, path, ""), do: previous_path_internal(conn, path, 1)
+  defp previous_path_internal(conn, path, nil), do: previous_path_internal(conn, path, 1)
+
+  defp previous_path_internal(conn, path, page) do
     previous_page = page - 1
     url = build_url(conn, path, previous_page)
 
@@ -107,12 +118,12 @@ defmodule PaginationEx.HTML do
     end
   end
 
-  defp build_url(conn, path, page) when is_atom(path) do
+  def build_url(conn, path, page) when is_atom(path) do
     router_module = config(:router_helpers) || raise "Router helpers module not configured"
     apply(router_module, path, [conn, :index, Map.put(conn.params, "page", page)])
   end
 
-  defp build_url(conn, path, page) do
+  def build_url(conn, path, page) do
     params = URI.encode_query(Map.put(conn.params, "page", page))
 
     if Regex.match?(~r/\?/, path) do
@@ -122,7 +133,7 @@ defmodule PaginationEx.HTML do
     end
   end
 
-  defp translate(text) do
+  def translate(text) do
     case config(:gettext_module) do
       nil -> text
       module -> apply(module, :gettext, [text])
