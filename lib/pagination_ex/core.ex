@@ -64,8 +64,62 @@ defmodule PaginationEx.Core do
   defp total_entries(_query, %{"total" => total}) when is_integer(total) and total >= 0, do: total
 
   defp total_entries(query, _params) do
-    query
-    |> repo().aggregate(:count, :id)
+    cond do
+      is_simple_count_query?(query) ->
+        query
+        |> exclude(:order_by)
+        |> exclude(:preload)
+        |> exclude(:select)
+        |> select([x], count(x.id))
+        |> repo().one() || 0
+
+      has_group_by?(query) || has_distinct?(query) ->
+        count_query = """
+        WITH count_query AS (
+          #{query |> exclude(:order_by) |> exclude(:preload) |> exclude(:limit) |> exclude(:offset) |> to_sql()}
+        )
+        SELECT count(*) FROM count_query
+        """
+
+        %{rows: [[count]]} = repo().query!(count_query)
+        count || 0
+
+      true ->
+        query
+        |> exclude(:order_by)
+        |> exclude(:preload)
+        |> exclude(:select)
+        |> exclude(:limit)
+        |> exclude(:offset)
+        |> subquery()
+        |> select([s], count(s))
+        |> repo().one() || 0
+    end
+  end
+
+  defp is_simple_count_query?(query) do
+    !has_group_by?(query) && !has_distinct?(query) && !has_joins?(query, [:left, :right, :full])
+  end
+
+  defp has_group_by?(%{group_bys: group_bys}) when is_list(group_bys) and length(group_bys) > 0 do
+    true
+  end
+
+  defp has_group_by?(_), do: false
+
+  defp has_distinct?(%{distinct: %{expr: expr}}) when not is_nil(expr), do: true
+  defp has_distinct?(_), do: false
+
+  defp has_joins?(query, types) do
+    Enum.any?(query.joins, fn
+      %{qual: qual} -> qual in types
+      _ -> false
+    end)
+  end
+
+  defp to_sql(query) do
+    {sql, _} = Ecto.Adapters.SQL.to_sql(:all, repo(), query)
+    sql
   end
 
   defp total_pages(total, per_page) when is_integer(per_page) and per_page > 0 do
