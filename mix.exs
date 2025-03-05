@@ -28,14 +28,16 @@ defmodule PaginationEx.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ecto, "~> 3.12"},
-      {:phoenix_html_helpers, "~> 1.0"},
-      {:tailwind, "~> 0.2.4"},
-      {:jason, "~> 1.4"},
+      {:credo, "~> 1.7"},
       {:ecto_sql, "~> 3.12"},
-      {:postgrex, "~> 0.20.0"},
+      {:ecto, "~> 3.12"},
+      {:ex_doc, "~> 0.37.1", only: :dev, runtime: false},
+      {:gettext, "~> 0.26.2"},
+      {:jason, "~> 1.4"},
       {:phoenix_ecto, "~> 4.6"},
-      {:ex_doc, "~> 0.37.1", only: :dev, runtime: false}
+      {:phoenix_html_helpers, "~> 1.0"},
+      {:postgrex, "~> 0.20.0"},
+      {:tailwind, "~> 0.2.4"}
     ]
   end
 
@@ -47,7 +49,7 @@ defmodule PaginationEx.MixProject do
 
   defp package do
     [
-      licenses: ["MIT"],
+      licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files: ~w(lib priv LICENSE.md mix.exs README.md)
     ]
