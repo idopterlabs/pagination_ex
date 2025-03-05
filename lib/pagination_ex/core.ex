@@ -1,6 +1,16 @@
 defmodule PaginationEx.Core do
   @moduledoc """
-  Core pagination functionality.
+  Core pagination functionality for Ecto queries.
+
+  This module provides the main pagination functionality for Ecto queries, including:
+
+  - Paginating query results with customizable page size
+  - Calculating total entries and pages
+  - Grouping results for bulk retrieval
+  - Handling various query types (simple, grouped, distinct)
+
+  The pagination result is a struct containing entries, metadata about the pagination,
+  and the original query.
   """
 
   import Ecto.Query
@@ -20,12 +30,68 @@ defmodule PaginationEx.Core do
   @default_per_page 30
   @default_per_group 1000
 
+  @doc """
+  Retrieves all entries in groups of specified size.
+
+  This function fetches all records matching the query in batches, combining them into
+  a single list. Useful for retrieving large datasets efficiently without loading
+  everything at once.
+
+  ## Parameters
+    * `query` - The Ecto query to paginate
+    * `params` - Map of pagination parameters (optional)
+      * `"per_group"` - Number of items per group (defaults to config or #{@default_per_group})
+      * `"total"` - Optional pre-calculated total count
+
+  ## Returns
+    * List of all entries matching the query
+
+  ## Examples
+      iex> PaginationEx.Core.in_groups(Post, %{"per_group" => "100"})
+      [%Post{}, %Post{}, ...]
+  """
+  @spec in_groups(Ecto.Queryable.t(), map()) :: list(any())
   def in_groups(query, params \\ %{}) do
     query
     |> new(set_group_params(params))
     |> get_group([])
   end
 
+  @doc """
+  Creates a new paginated result for the given query.
+
+  This function returns a pagination struct containing the entries for the requested page,
+  along with metadata about the pagination such as total entries, page count, etc.
+
+  ## Parameters
+    * `query` - The Ecto query to paginate
+    * `params` - Map of pagination parameters
+      * `"page"` - Page number to fetch (defaults to 1)
+      * `"per_page"` - Number of items per page (defaults to #{@default_per_page})
+      * `"total"` - Optional pre-calculated total count
+    * `opts` - Options passed to `Repo.all/2` (optional)
+
+  ## Returns
+    * A `PaginationEx.Core` struct containing:
+      * `entries` - The paginated query results
+      * `total_entries` - Total count of matching records
+      * `page_number` - Current page number
+      * `per_page` - Number of items per page
+      * `pages` - Total number of pages
+      * `query` - The original query
+
+  ## Examples
+      iex> PaginationEx.Core.new(Post, %{"page" => "2", "per_page" => "10"})
+      %PaginationEx.Core{
+        entries: [%Post{}, %Post{}, ...],
+        total_entries: 59,
+        page_number: 2,
+        per_page: 10,
+        pages: 6,
+        query: #Ecto.Query<...>
+      }
+  """
+  @spec new(Ecto.Queryable.t(), map(), keyword()) :: t()
   def new(query, params, opts \\ []) do
     page_number = params |> Map.get("page", 1) |> to_int(:page)
     per_page = params |> Map.get("per_page", @default_per_page) |> to_int(:per_page)
