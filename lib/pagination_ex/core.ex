@@ -15,6 +15,8 @@ defmodule PaginationEx.Core do
 
   import Ecto.Query
 
+  alias Ecto.Adapters.SQL
+
   @derive {Jason.Encoder, only: [:entries, :total_entries, :page_number, :per_page, :pages]}
   defstruct [:entries, :total_entries, :page_number, :per_page, :pages, :query]
 
@@ -131,7 +133,7 @@ defmodule PaginationEx.Core do
 
   defp total_entries(query, _params) do
     cond do
-      is_simple_count_query?(query) ->
+      simple_count_query?(query) ->
         query
         |> exclude(:order_by)
         |> exclude(:preload)
@@ -163,7 +165,7 @@ defmodule PaginationEx.Core do
     end
   end
 
-  defp is_simple_count_query?(query) do
+  defp simple_count_query?(query) do
     !has_group_by?(query) && !has_distinct?(query) && !has_joins?(query, [:left, :right, :full])
   end
 
@@ -184,7 +186,7 @@ defmodule PaginationEx.Core do
   end
 
   defp to_sql(query) do
-    {sql, _} = Ecto.Adapters.SQL.to_sql(:all, repo(), query)
+    {sql, _} = SQL.to_sql(:all, repo(), query)
     sql
   end
 

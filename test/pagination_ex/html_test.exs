@@ -1,6 +1,8 @@
 defmodule PaginationEx.HTMLTest do
   use ExUnit.Case
 
+  alias Phoenix.HTML.Safe
+
   setup do
     conn = %{
       params: %{},
@@ -23,7 +25,7 @@ defmodule PaginationEx.HTMLTest do
       result =
         conn
         |> PaginationEx.paginate("/test")
-        |> Phoenix.HTML.Safe.to_iodata()
+        |> Safe.to_iodata()
         |> IO.iodata_to_binary()
 
       assert result =~ "Pages: 2 of 4"
@@ -37,7 +39,7 @@ defmodule PaginationEx.HTMLTest do
       result =
         conn
         |> PaginationEx.paginate("/test?sort=desc")
-        |> Phoenix.HTML.Safe.to_iodata()
+        |> Safe.to_iodata()
         |> IO.iodata_to_binary()
 
       assert result =~ "sort=desc"
@@ -50,7 +52,7 @@ defmodule PaginationEx.HTMLTest do
       result =
         conn
         |> PaginationEx.paginate("/test")
-        |> Phoenix.HTML.Safe.to_iodata()
+        |> Safe.to_iodata()
         |> IO.iodata_to_binary()
 
       assert result =~ "disabled"
@@ -65,7 +67,7 @@ defmodule PaginationEx.HTMLTest do
       result =
         conn
         |> PaginationEx.paginate("/test")
-        |> Phoenix.HTML.Safe.to_iodata()
+        |> Safe.to_iodata()
         |> IO.iodata_to_binary()
 
       assert result =~ "disabled"
@@ -78,7 +80,7 @@ defmodule PaginationEx.HTMLTest do
       result =
         conn
         |> PaginationEx.paginate("/test")
-        |> Phoenix.HTML.Safe.to_iodata()
+        |> Safe.to_iodata()
         |> IO.iodata_to_binary()
 
       assert result =~ ~s(role="navigation")
@@ -117,7 +119,7 @@ defmodule PaginationEx.HTMLTest do
       result =
         conn
         |> PaginationEx.paginate("/test", template_module: TestTemplateModule)
-        |> Phoenix.HTML.Safe.to_iodata()
+        |> Safe.to_iodata()
         |> IO.iodata_to_binary()
 
       assert result =~ "Custom Pages: 2/4"

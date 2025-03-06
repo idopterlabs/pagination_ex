@@ -121,7 +121,7 @@ defmodule PaginationEx.CoreTest do
       assert result.page_number == 1
       assert result.total_entries == 0
       assert result.pages == 0
-      assert length(result.entries) == 0
+      assert Enum.empty?(result.entries)
     end
 
     test "in_groups returns all items" do
@@ -158,7 +158,7 @@ defmodule PaginationEx.CoreTest do
 
       assert result.page_number == 5
       assert result.total_entries == 30
-      assert length(result.entries) == 0
+      assert Enum.empty?(result.entries)
     end
 
     test "accepts total override in params" do
@@ -189,7 +189,7 @@ defmodule PaginationEx.CoreTest do
       query = from(i in TestSchema, where: i.name == "NonExistent")
       result = PaginationEx.in_groups(query, %{})
 
-      assert length(result) == 0
+      assert Enum.empty?(result)
     end
 
     test "accepts integer params" do
@@ -220,7 +220,7 @@ defmodule PaginationEx.CoreTest do
       result = PaginationEx.new(query, %{"page" => "999999"})
 
       assert result.page_number == 999_999
-      assert length(result.entries) == 0
+      assert Enum.empty?(result.entries)
     end
 
     test "handles very large per_page" do
@@ -275,7 +275,7 @@ defmodule PaginationEx.CoreTest do
       assert result.page_number == 1
       assert result.total_entries == 0
       assert result.pages == 0
-      assert length(result.entries) == 0
+      assert Enum.empty?(result.entries)
     end
 
     test "successfully paginates with GROUP BY and ORDER BY" do
@@ -396,8 +396,7 @@ defmodule PaginationEx.CoreTest do
         placeholders =
           params
           |> Enum.with_index()
-          |> Enum.map(fn {_, idx} -> "($#{idx * 2 + 1}, $#{idx * 2 + 2})" end)
-          |> Enum.join(", ")
+          |> Enum.map_join(", ", fn {_, idx} -> "($#{idx * 2 + 1}, $#{idx * 2 + 2})" end)
 
         values = params |> List.flatten()
 

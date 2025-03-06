@@ -48,7 +48,7 @@ defmodule PaginationEx.HTML do
     template_module = Keyword.get(opts, :template_module)
 
     if template_module do
-      apply(template_module, :render_pagination, [conn, path, conn.assigns.pagination])
+      template_module.render_pagination(conn, path, conn.assigns.pagination)
     else
       do_paginate(conn, path, conn.assigns.pagination)
     end
@@ -276,7 +276,7 @@ defmodule PaginationEx.HTML do
   def translate(text) do
     case config(:gettext_module) do
       nil -> text
-      module -> apply(module, :gettext, [text])
+      module -> module.gettext(text)
     end
   end
 
