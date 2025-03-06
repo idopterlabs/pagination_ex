@@ -17,7 +17,7 @@ The package is not yet available on Hex.pm. To install directly from GitHub, add
 ```elixir
 def deps do
   [
-    {:pagination_ex, github: "idopterlabs/pagination_ex"}
+    {:pagination_ex, "~> 0.1.0"}
   ]
 end
 ```
