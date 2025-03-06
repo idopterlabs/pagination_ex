@@ -14,7 +14,8 @@ defmodule PaginationEx.MixProject do
       description: description(),
       package: package(),
       name: "PaginationEx",
-      docs: docs()
+      docs: docs(),
+      dialyzer: [plt_local_path: "priv/plts", ignore_warnings: ".dialyzerignore"]
     ]
   end
 
@@ -28,7 +29,8 @@ defmodule PaginationEx.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:credo, "~> 1.7"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.12"},
       {:ecto, "~> 3.12"},
       {:ex_doc, "~> 0.37.1", only: :dev, runtime: false},
