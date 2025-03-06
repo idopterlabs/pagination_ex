@@ -20,6 +20,7 @@ def deps do
     {:pagination_ex, github: "idopterlabs/pagination_ex"}
   ]
 end
+```
 
 ## Configuration
 
