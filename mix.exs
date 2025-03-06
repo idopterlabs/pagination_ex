@@ -53,7 +53,7 @@ defmodule PaginationEx.MixProject do
     [
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
-      files: ~w(lib priv LICENSE.md mix.exs README.md)
+      files: ~w(lib priv LICENSE mix.exs README.md)
     ]
   end
 
